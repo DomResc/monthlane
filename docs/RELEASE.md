@@ -18,11 +18,19 @@ This checklist does not certify the release. Review the exact source and assets 
 - After acceptance of APK 25, the notices were added as an asset and the documentation was updated. A subsequent unsigned release build succeeded, including release vital lint. Its packaged notice file matches the source exactly and covers all 126 resolved release coordinates. This packaging check does not replace physical-device acceptance of the final release-signed APK.
 - Public GitHub [Android CI run 43618445956](https://github.com/DomResc/monthlane/actions/runs/43618445956) passed for source commit `e192449750be960383a0a096890cd4f34e0e48cc` on Ubuntu 24.04 with JDK 21. It built debug and release APKs, ran unit tests and debug lint, and compiled the instrumentation APK. It did not execute instrumentation tests on GitHub. The SDK bootstrap now uses the explicit SDK manager path in both workflows after the first run failed to find the command through `PATH`.
 
-The public-file review included the working-tree fixes, README screenshot and third-party notices. The application sources have been committed and pushed. Release signing configuration and the final release-signed APK remain to be verified.
+The public-file review included the working-tree fixes, README screenshot and third-party notices. The application sources have been committed and pushed.
+
+- Release candidate `1.0.0` (26) was built and signed locally with a dedicated RSA-4096 key. Release lint and all 16 unit tests passed. APK SHA-256: `b8e112fbc63ffa8dd5f30d7b2702572fe9af7d0ebe7b3dd4e4ae4b1be7c70090`. Signing certificate SHA-256: `43da9e18bacaad9930ce9fed45ba4d3b13849f801c0d9e8595d17a143356deff`. Signature verification, 16 KiB alignment, package/version identity, non-debuggable status and the packaged third-party notices were checked. The shared test copy has the same checksum. Physical-device acceptance of this exact artifact is pending.
+- The encrypted keystore is held separately from the repository; its password is held in Bitwarden. A local recovery copy was reopened and its exported certificate matched the expected fingerprint. Remote backup synchronization has not been verified. The temporary system-keyring password copy was removed after signing.
+- On the dedicated Android 16/API 36 emulator, the signed candidate installed successfully after removing the debug-key test app, and its settings activity launched successfully. Reinstalling the same APK with the same key also succeeded. This is an installation smoke check, not a forward-version update or a full functional acceptance test. Release lint reported 0 errors and 54 warnings.
 
 ## Signing and GitHub release
 
-Create a dedicated Android release keystore outside the repository. Store the keystore and passwords securely, with a tested recovery procedure. Losing the signing key prevents normal updates; never commit or send it through the repository. Before using the workflow, configure these repository secrets:
+Keep the dedicated Android release keystore outside the repository. Store the keystore and passwords securely, with a tested recovery procedure. Losing the signing key prevents normal updates; never commit or send it through the repository.
+
+For a locally signed release, build the reviewed source, align the unsigned APK before signing, then verify the signature against the expected certificate, package/version identity, alignment and checksum. Test that exact APK on a physical device and verify recoverability of the signing key before publication. Attach the signed APK and its SHA-256 file to a draft GitHub release for the matching source tag; inspect the assets before publishing. This route does not require uploading signing credentials to GitHub.
+
+The optional GitHub signing workflow has not been configured or exercised. Before using it, explicitly arrange custody of signing credentials on GitHub and configure these repository secrets:
 
 - `ANDROID_KEYSTORE_BASE64`: base64 encoding of the complete keystore.
 - `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`: its credentials.

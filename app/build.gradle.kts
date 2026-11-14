@@ -9,7 +9,7 @@ android {
         applicationId = "org.monthlane"
         minSdk = 31
         targetSdk = 36
-        versionCode = 25
+        versionCode = 26
         versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
