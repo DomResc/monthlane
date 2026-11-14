@@ -1,0 +1,26 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.READ_CALENDAR"/>
+    <uses-permission android:name="org.breezyweather.READ_PROVIDER"/>
+    <uses-permission android:name="org.tasks.permission.READ_TASKS"/>
+    <uses-permission android:name="org.tasks.permission.WRITE_TASKS"/>
+    <queries><provider android:authorities="org.tasks.api"/><package android:name="org.breezyweather"/><provider android:authorities="org.breezyweather.provider.weather"/></queries>
+    <application android:localeConfig="@xml/locales_config" android:label="Monthlane" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher" android:theme="@style/Theme.Monthlane" android:allowBackup="false" android:dataExtractionRules="@xml/data_extraction_rules" android:supportsRtl="true">
+        <activity android:name=".settings.SettingsActivity" android:exported="true">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+        </activity>
+        <activity android:name=".settings.WidgetConfigurationActivity" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE"/></intent-filter>
+        </activity>
+        <activity android:name=".settings.TasksShortcutActivity" android:exported="false"/>
+        <activity android:name=".settings.WeatherActivity" android:exported="false"/>
+        <activity android:name=".settings.CalendarShortcutActivity" android:exported="false"/>
+        <activity android:name=".settings.CalendarEventActivity" android:exported="false"/>
+        <receiver android:name=".widget.home.LocaleChangedReceiver" android:exported="false">
+            <intent-filter><action android:name="android.intent.action.LOCALE_CHANGED"/><action android:name="android.intent.action.DATE_CHANGED"/><action android:name="android.intent.action.TIME_SET"/><action android:name="android.intent.action.TIMEZONE_CHANGED"/></intent-filter>
+        </receiver>
+        <receiver android:name=".widget.home.HomeWidgetReceiver" android:exported="true" android:label="Monthlane · Home">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/home_widget_info"/>
+        </receiver>
+    </application>
+</manifest>

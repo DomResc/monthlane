@@ -1,0 +1,1 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"><application><activity android:name=".qa.WidgetGalleryActivity" android:exported="true"/><activity android:name=".qa.WidgetHostActivity" android:exported="true"/></application></manifest>

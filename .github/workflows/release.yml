@@ -1,0 +1,66 @@
+name: Prepare release APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Validate release tag and draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = true
+      - name: Install Android SDK packages
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Build and test
+        run: ./gradlew :app:assembleRelease :app:testDebugUnitTest :app:lintDebug
+      - name: Verify version and sign APK
+        env:
+          TAG: ${{ github.ref_name }}
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          EXPECTED_CERT_SHA256: ${{ vars.ANDROID_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_BASE64" && test -n "$KEYSTORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD"
+          [[ "$EXPECTED_CERT_SHA256" =~ ^[0-9a-fA-F]{64}$ ]]
+          version=$(python3 -c 'import json; print(json.load(open("app/build/outputs/apk/release/output-metadata.json"))["elements"][0]["versionName"])')
+          test "$TAG" = "v$version"
+          build_tools="$ANDROID_HOME/build-tools/36.0.0"
+          keystore="$RUNNER_TEMP/monthlane-release.jks"
+          trap 'rm -f "$keystore"' EXIT
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          "$build_tools/zipalign" -f -P 16 4 app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/aligned.apk"
+          mkdir -p release-assets
+          apk="release-assets/monthlane-$version.apk"
+          "$build_tools/apksigner" sign --ks "$keystore" --ks-key-alias "$KEY_ALIAS" --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEY_PASSWORD --out "$apk" "$RUNNER_TEMP/aligned.apk"
+          "$build_tools/zipalign" -c -P 16 4 "$apk"
+          certificate=$("$build_tools/apksigner" verify --verbose --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+          test "${certificate,,}" = "${EXPECTED_CERT_SHA256,,}"
+          (cd release-assets && sha256sum "monthlane-$version.apk" > "monthlane-$version.apk.sha256")
+      - name: Attach APK and checksum to draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release upload "$TAG" release-assets/*
